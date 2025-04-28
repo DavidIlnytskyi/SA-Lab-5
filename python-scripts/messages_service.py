@@ -129,11 +129,6 @@ if __name__ == "__main__":
         config_server_url = sys.argv[2].strip()
         messages_service_idx = int(sys.argv[3])
 
-        kafka_services = get_service_ips("kafka-services")
-        write_log(f"List Kafka: {kafka_services}", host_port)
-
-        kafka_url = kafka_services[messages_service_idx]
-
         host_port = host_url.port
         host_ip = host_url.hostname
 
@@ -142,6 +137,11 @@ if __name__ == "__main__":
 
         consul_client = consul.Consul(host=consul_ip, port=consul_port)
 
+        _, data = consul_client.kv.get("kafka_urls")
+        kafka_services = json.loads(data['Value'])
+        kafka_url = kafka_services[messages_service_idx]
+
+        write_log(f"List Kafka: {kafka_services}", host_port)
         write_log(f"List Args: {sys.argv}", host_port)
 
     except Exception as e:

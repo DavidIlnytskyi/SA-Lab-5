@@ -29,8 +29,6 @@ def get_service_ips_consul(service_name: str):
     return result_ips
 
 def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
-    consul_client = consul.Consul(host=consul_ip, port=consul_port)
-
     consul_client.agent.service.register(
     name=service_name,
     service_id=service_id,
@@ -53,7 +51,6 @@ def start_consumer():
 
 @app.on_event("shutdown")
 async def event_shutdown():
-    consul_client = consul.Consul(host=consul_ip, port=consul_port)
     consul_client.agent.service.deregister(service_id)
 
 
@@ -68,10 +65,6 @@ def get_service_ips(service_name):
 
 def send_message_to_queue(message):
     write_log(f"Writing message {message} to the queue", host_port)
-
-    if not kafka_urls:
-        print("Kafka service is unavailable")
-        return
     
     producer = KafkaProducer(bootstrap_servers=kafka_urls)
     producer.send(TOPIC_NAME, bytes(message, "UTF-8"))
@@ -166,7 +159,11 @@ if __name__ == "__main__":
 
     messages_urls = get_service_ips_consul("messages-service")
     logging_urls = get_service_ips_consul("logging-service")
-    kafka_urls = get_service_ips("kafka-services")
+
+    consul_client = consul.Consul(host=consul_ip, port=consul_port)
+
+    _, data = consul_client.kv.get("kafka_urls")
+    kafka_urls = json.loads(data['Value'])
 
     write_log(f"Messages urls from consul: {messages_urls}", host_port)
     write_log(f"Logging urls from consul: {logging_urls}", host_port)

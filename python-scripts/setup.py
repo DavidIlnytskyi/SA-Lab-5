@@ -26,7 +26,6 @@ if __name__ == "__main__":
 
     TOPIC_NAME = "messages"
     KAFKA_GROUP_ID = "messages_group"
-    kafka_url = ["localhost:9092", "localhost:9093"]  # Assuming list
     auto_offset_reset = "latest"
     enable_auto_commit = True
     api_version = (2, 0, 2)
@@ -62,13 +61,11 @@ if __name__ == "__main__":
         consul_client.kv.put("hazelcast_urls", hazelcast_nodes_json)
         consul_client.kv.put("topic_name", TOPIC_NAME)
         consul_client.kv.put("group_id", KAFKA_GROUP_ID)
-        consul_client.kv.put("kafka_urls", json.dumps(kafka_url))
+        consul_client.kv.put("kafka_urls", json.dumps(kafka_service_ip))
         consul_client.kv.put("auto_offset_reset", auto_offset_reset)
         consul_client.kv.put("enable_auto_commit", json.dumps(enable_auto_commit))
         consul_client.kv.put("api_version", json.dumps(api_version))
         consul_client.kv.put("request_timeout_ms", str(request_timeout_ms))
-
-
 
         hazel_idx = 0
         for idx, (log_ip, hazel_ip) in enumerate(zip(logging_services, hazelcast_nodes)):

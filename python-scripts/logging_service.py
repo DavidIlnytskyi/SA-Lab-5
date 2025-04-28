@@ -5,6 +5,7 @@ from domain import *
 import consul
 import hazelcast
 import uvicorn
+import random
 import uuid
 import json
 import sys
@@ -30,6 +31,7 @@ def add_data(data: DataModel):
     write_log("Post request", host_port)
     write_log(f"Added key: {data.uuid} with value: {data.msg} by logging service: {host_url}", host_port)
     distributed_map.set(data.uuid, data.msg)
+
     return {"msg": "success"}
 
 @app.get("/")
@@ -79,7 +81,11 @@ if __name__ == "__main__":
 
         index, data = consul_client.kv.get("hazelcast_urls")
         hazelcast_nodes = json.loads(data['Value'])
-        hazelcast_url = hazelcast_nodes[hazelcast_idx]
+
+        if hazelcast_idx < len(hazelcast_nodes):
+            hazelcast_url = hazelcast_nodes[hazelcast_idx]
+        elif len(hazelcast_nodes) > 0:
+            hazelcast_url = hazelcast_nodes[random.randint(0, len(hazelcast_nodes) - 1)]
 
         service_name = os.path.basename(sys.argv[0])
         service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
