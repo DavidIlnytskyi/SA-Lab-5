@@ -21,6 +21,10 @@ if __name__ == "__main__":
     processes = []
 
     try:
+        consul_service_url = config["consul-service"].get("ips")
+        consul_service_ip = consul_service_url[:consul_service_url.find(":")]
+        consul_service_port = consul_service_url[consul_service_url.find(":")+1:]
+
         config_service_ip = config["config-service"].get("ips")
         if config_service_ip:
             process = start_service("Config Service", "config-service", config_service_ip)
@@ -31,7 +35,7 @@ if __name__ == "__main__":
         kafka_service_ip = config["kafka-services"].get("ips").split(", ")
 
         for idx, msg_ip in enumerate(messages_service_ip):
-            process = start_service(f"Messages Service {idx+1}", "messages_service", msg_ip, config_service_ip, str(idx))
+            process = start_service(f"Messages Service {idx+1}", "messages_service", msg_ip, config_service_ip, str(idx), consul_service_ip, consul_service_port)
             if process:
                 processes.append(process)
 

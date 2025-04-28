@@ -7,16 +7,31 @@ import requests
 from kafka import KafkaConsumer
 import time
 import threading
+import consul
+import uuid
+import os
 
 app = FastAPI()
 
-POLL_INTERVAL = 3
-TOPIC_NAME = "messages"
-KAFKA_GROUP_ID = "messages_group"
-CONSUMER_POLL_TIME_OUT_MS = 1000
+def register_service(service_ip, service_port, consul_ip, consul_port):
+    service_name = os.path.basename(sys.argv[0])
 
-messages = []
-consumer_running = True
+    consul_client = consul.Consul(host=consul_ip, port=consul_port)
+
+    service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
+
+    consul_client.agent.service.register(
+    name=service_name,
+    service_id=service_id,
+    address=service_ip,
+    port=service_port,
+    check=consul.Check.http(
+        url=f"http://{service_ip}:{consul_ip}/health",
+        interval="10s",
+        timeout="1s",
+        deregister="10m"
+    )
+)
 
 def get_service_ips(service_name):
     try:
@@ -41,9 +56,9 @@ def consume_messages():
             api_version=(2, 0, 2),
             request_timeout_ms=15000
         )
-        write_log("Kafka Consumer Connected", port)
+        write_log("Kafka Consumer Connected", host_port)
     except Exception as e:
-        write_log(f"Kafka Consumer Failed: {e}", port)
+        write_log(f"Kafka Consumer Failed: {e}", host_port)
         return
 
     while consumer_running:
@@ -51,38 +66,54 @@ def consume_messages():
         for tp, msgs in records.items():
             for msg in msgs:
                 messages.append(msg.value.decode())
-                write_log(f"New message received: {msg.value.decode()}", port)
+                write_log(f"New message received: {msg.value.decode()}", host_port)
         
         time.sleep(POLL_INTERVAL) 
 
 @app.on_event("startup")
 def start_consumer():
+    # register_service(host_ip, host_port, consul_ip, consul_port)
+
     thread = threading.Thread(target=consume_messages, daemon=True)
     thread.start()
 
 @app.get("/")
 def get_data():
-    write_log("GET request", port)
+    write_log("GET request", host_port)
 
-    write_log(f"GET request response: {messages}", port)
+    write_log(f"GET request response: {messages}", host_port)
     return {"msg": messages}
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: script.py <host_url> <config_server_url> <messages_service_idx>")
-        sys.exit(1)
-    port = None
+    POLL_INTERVAL = 3
+    TOPIC_NAME = "messages"
+    KAFKA_GROUP_ID = "messages_group"
+    CONSUMER_POLL_TIME_OUT_MS = 1000
+
+    messages = []
+    consumer_running = True
+    host_port = 1111
+
     try:
         host_url = urlparse(sys.argv[1].strip())
+        write_log(f"List: {str(sys.argv)}", host_port)
+
         config_server_url = sys.argv[2].strip()
         messages_service_idx = int(sys.argv[3])
 
         kafka_services = get_service_ips("kafka-services")
+
         kafka_url = kafka_services[messages_service_idx]
 
-        port = host_url.port
+        host_port = host_url.port
+        host_ip = host_url.hostname
+
+
+        consul_ip = sys.argv[4].strip()
+        consul_port = int(sys.argv[5])
+
     except Exception as e:
-        write_log(f"Exception {e}", )
+        write_log(f"Exception {e}", host_port)
     
-    write_log(f"Starting up server: {host_url.hostname}:{port}", port)
-    uvicorn.run(app, host=host_url.hostname, port=port)
+    write_log(f"Starting up server: {host_url.hostname}:{host_port}", host_port)
+    uvicorn.run(app, host=host_ip, port=host_port)

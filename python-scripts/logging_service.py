@@ -1,17 +1,10 @@
 from util_functions import write_log
 from urllib.parse import urlparse
-from pydantic import BaseModel
 from fastapi import FastAPI
+from domain import *
 import hazelcast
 import uvicorn
 import sys
-
-class Message(BaseModel):
-    msg: str
-
-class DataModel(BaseModel):
-    uuid: str
-    msg: str
 
 app = FastAPI()
 

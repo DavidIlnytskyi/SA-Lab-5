@@ -1,11 +1,11 @@
-from util_functions import write_log
+from fastapi import FastAPI
 from urllib.parse import urlparse
 from kafka import KafkaProducer
-from fastapi import FastAPI
+from util_functions import write_log
 from random import shuffle
 import requests
-import uvicorn
 import sys
+import uvicorn
 import uuid
 import json
 

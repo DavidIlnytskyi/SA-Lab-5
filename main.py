@@ -8,10 +8,10 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    SERVICE_NAME = sys.argv[0][:-3]
+    SERVICE_NAME = "MyApp"
     SERVICE_ID = f"{SERVICE_NAME}-{str(uuid.uuid4())[:4]}"
 
-    CONSUL_IP = "172.24.0.2"
+    CONSUL_IP = "localhost"
     CONSUL_PORT = 8500
 
     SERVICE_IP = socket.gethostbyname(socket.gethostname())

@@ -1,6 +1,6 @@
-from datetime import datetime
-import sys
 import os
+import sys
+from datetime import datetime
 
 def write_log(message: str, port: int):
     current_time = str(datetime.now().time())
