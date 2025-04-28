@@ -6,24 +6,23 @@ import consul
 import hazelcast
 import uvicorn
 import uuid
+import json
 import sys
 import os
 
 app = FastAPI()
 
 def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
-    consul_client = consul.Consul(host=consul_ip, port=consul_port)
-
     consul_client.agent.service.register(
-    name=service_name,
-    service_id=service_id,
-    address=service_ip,
-    port=service_port,
-    check=consul.Check.http(
-        url=f"http://{service_ip}:{consul_ip}/health",
-        interval="10s",
-        timeout="1s",
-        deregister="10m")
+        name=service_name,
+        service_id=service_id,
+        address=service_ip,
+        port=service_port,
+        check=consul.Check.http(
+            url=f"http://{service_ip}:{consul_ip}/health",
+            interval="10s",
+            timeout="1s",
+            deregister="10m")
     )
 
 @app.post("/")
@@ -71,10 +70,16 @@ if __name__ == "__main__":
     host_port = 2222
     try:
         host_url = urlparse(sys.argv[1])
-        hazelcast_url = sys.argv[2]
+        hazelcast_idx = int(sys.argv[2])
 
         consul_ip = sys.argv[3].strip()
         consul_port = int(sys.argv[4])
+
+        consul_client = consul.Consul(host=consul_ip, port=consul_port)
+
+        index, data = consul_client.kv.get("hazelcast_urls")
+        hazelcast_nodes = json.loads(data['Value'])
+        hazelcast_url = hazelcast_nodes[hazelcast_idx]
 
         service_name = os.path.basename(sys.argv[0])
         service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
