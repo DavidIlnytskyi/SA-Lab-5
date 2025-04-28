@@ -1,13 +1,13 @@
-from fastapi import FastAPI
-from util_functions import write_log
-import uvicorn
 from fastapi.responses import JSONResponse
-import sys
+from util_functions import write_log
 from urllib.parse import urlparse
-import requests
 from kafka import KafkaConsumer
-import time
+from fastapi import FastAPI
 import threading
+import requests
+import uvicorn
+import sys
+import time
 import consul
 import uuid
 import os
@@ -26,9 +26,8 @@ def register_service(service_name, service_id, service_ip, service_port, consul_
         url=f"http://{service_ip}:{consul_ip}/health",
         interval="10s",
         timeout="1s",
-        deregister="10m"
+        deregister="10m")
     )
-)
 
 def get_service_ips(service_name):
     try:
@@ -75,13 +74,9 @@ def start_consumer():
         write_log(f"Kafka Consumer Failed: {e}", host_port)
         return
 
-
     thread = threading.Thread(target=consume_messages, daemon=True)
     thread.start()
 
-
-
-# Handle the startup event
 @app.on_event("shutdown")
 async def event_shutdown():
     consul_client = consul.Consul(host=consul_ip, port=consul_port)
@@ -97,6 +92,7 @@ def get_data():
 
     write_log(f"GET request response: {messages}", host_port)
     return {"msg": messages}
+
 
 if __name__ == "__main__":
     POLL_INTERVAL = 3
@@ -117,7 +113,7 @@ if __name__ == "__main__":
         messages_service_idx = int(sys.argv[3])
 
         kafka_services = get_service_ips("kafka-services")
-        write_log(f"List: {kafka_services}", host_port)
+        write_log(f"List Kafka: {kafka_services}", host_port)
 
         kafka_url = kafka_services[messages_service_idx]
 
@@ -126,12 +122,10 @@ if __name__ == "__main__":
 
         consul_ip = sys.argv[4].strip()
         consul_port = int(sys.argv[5])
-        write_log(f"List: {sys.argv}", host_port)
+        write_log(f"List Args: {sys.argv}", host_port)
 
     except Exception as e:
         write_log(f"Exception {e}", host_port)
-    
-
 
     write_log(f"Starting up server: {host_url.hostname}:{host_port}", host_port)
     uvicorn.run(app, host=host_ip, port=host_port)

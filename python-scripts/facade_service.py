@@ -1,25 +1,60 @@
-from fastapi import FastAPI
+from util_functions import write_log
 from urllib.parse import urlparse
 from kafka import KafkaProducer
-from util_functions import write_log
+from fastapi import FastAPI
 from random import shuffle
 import requests
-import sys
 import uvicorn
+import consul
 import uuid
 import json
-
-messages_urls = []
-logging_urls = []
-kafka_urls = []
-
-host_url = None
-config_server_url = None
-port = None
-
-TOPIC_NAME = "messages"
+import time
+import sys
+import os
 
 app = FastAPI()
+
+def get_service_ips_consul(service_name: str):
+    consul_client = consul.Consul(host=consul_ip, port=consul_port)
+
+    services = consul_client.agent.services()
+
+    service_name = service_name.replace("-", "_")
+    result_ips = []
+
+    for service_id, service_info in services.items():
+        if service_name == service_info["Service"][:-3]:
+            result_ips.append(f"{service_info['Address']}:{service_info['Port']}")
+
+    return result_ips
+
+def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
+    consul_client = consul.Consul(host=consul_ip, port=consul_port)
+
+    consul_client.agent.service.register(
+    name=service_name,
+    service_id=service_id,
+    address=service_ip,
+    port=service_port,
+    check=consul.Check.http(
+        url=f"http://{service_ip}:{consul_ip}/health",
+        interval="10s",
+        timeout="1s",
+        deregister="10m")
+    )
+
+@app.on_event("startup")
+def start_consumer():
+    try:
+        register_service(service_name, service_id, host_ip, host_port, consul_ip, consul_port)
+    except Exception as e:
+        write_log(f"Kafka Consumer Failed: {e}", host_port)
+        return
+
+@app.on_event("shutdown")
+async def event_shutdown():
+    consul_client = consul.Consul(host=consul_ip, port=consul_port)
+    consul_client.agent.service.deregister(service_id)
 
 
 def get_service_ips(service_name):
@@ -32,7 +67,7 @@ def get_service_ips(service_name):
         return []
 
 def send_message_to_queue(message):
-    write_log(f"Writing message {message} to the queue", port)
+    write_log(f"Writing message {message} to the queue", host_port)
 
     if not kafka_urls:
         print("Kafka service is unavailable")
@@ -44,7 +79,7 @@ def send_message_to_queue(message):
 
 @app.post("/")
 def add_data(message: dict):
-    write_log("POST request", port)
+    write_log("POST request", host_port)
     uuid_val = uuid.uuid4()
     message_value = message.get("msg", "")
     data = {"uuid": str(uuid_val), "msg": message_value}
@@ -56,7 +91,7 @@ def add_data(message: dict):
         try:
             response = requests.post(logging_service_url, json=data, timeout=3)
             if response.status_code == 200:
-                write_log(f"Sending message {message_value} to the logging service", port)
+                write_log(f"Sending message {message_value} to the logging service", host_port)
                 break
         except requests.exceptions.RequestException as e:
             return {"error": f"Error with logging service {logging_service_url}: {e}"}
@@ -67,7 +102,7 @@ def add_data(message: dict):
 
 @app.get("/")
 def get_data():
-    write_log("GET request", port)
+    write_log("GET request", host_port)
     shuffled_logging_urls = logging_urls[:]
     shuffled_messages_urls = messages_urls[:]
     
@@ -79,22 +114,22 @@ def get_data():
 
     for logging_url in shuffled_logging_urls:
         try:
-            write_log(f"Trying to connect to logging service: {logging_url}", port)
+            write_log(f"Trying to connect to logging service: {logging_url}", host_port)
             logging_service_response = requests.get(logging_url, timeout=3)
             if logging_service_response.status_code == 200:
                 logging_service_messages = json.loads(logging_service_response.content.decode("utf-8"))
-                write_log(f"Connected successfully", port)
+                write_log(f"Connected successfully", host_port)
                 break
         except requests.exceptions.RequestException as e:
             print({"err" : f"Error with logging service {logging_url}: {e}"})
 
     for messages_url in shuffled_messages_urls:
         try:
-            write_log(f"Trying to connect to messages service: {messages_url}", port)
+            write_log(f"Trying to connect to messages service: {messages_url}", host_port)
             messages_service_response = requests.get(messages_url, timeout=10)
             if messages_service_response.status_code == 200:
                 messages_service_messages = json.loads(messages_service_response.content.decode("utf-8"))["msg"]
-                write_log(f"Connected successfully", port)
+                write_log(f"Connected successfully", host_port)
                 break
         except requests.exceptions.RequestException as e:
             print({"err": f"Error with messages service {messages_url}: {e}"})
@@ -104,23 +139,37 @@ def get_data():
         "messages_service_response": messages_service_messages
     }
 
-    write_log(f"GET request response: {GET_request_response}", port)
+    write_log(f"GET request response: {GET_request_response}", host_port)
 
     return GET_request_response
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: facade_service.py <host_url> <config_server_url>")
-        sys.exit(1)
-    
+    TOPIC_NAME = "messages"
+
+    messages_urls = []
+    logging_urls = []
+    kafka_urls = []
+
     host_url = urlparse(sys.argv[1])
     config_server_url = sys.argv[2]
 
-    messages_urls = [msg.strip() for msg in get_service_ips("messages-services")]
-    logging_urls = get_service_ips("logging-services")
+    consul_ip = sys.argv[3].strip()
+    consul_port = int(sys.argv[4])
+
+    host_ip = host_url.hostname
+    host_port = host_url.port
+
+    service_name = os.path.basename(sys.argv[0])
+    service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
+
+    time.sleep(15)
+
+    messages_urls = get_service_ips_consul("messages-service")
+    logging_urls = get_service_ips_consul("logging-service")
     kafka_urls = get_service_ips("kafka-services")
 
-    port = host_url.port
+    write_log(f"Messages urls from consul: {messages_urls}", host_port)
+    write_log(f"Logging urls from consul: {logging_urls}", host_port)
 
-    write_log(f"Starting up server {host_url.hostname}:{port}", port)
-    uvicorn.run(app, host=host_url.hostname, port=port)
+    write_log(f"Starting up server {host_ip}:{host_port}", host_port)
+    uvicorn.run(app, host=host_ip, port=host_port)

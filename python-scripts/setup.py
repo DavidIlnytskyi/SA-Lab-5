@@ -43,13 +43,13 @@ if __name__ == "__main__":
         hazelcast_nodes = config["hazelcast"].get("ips", "").split(", ")
         
         for idx, (log_ip, hazel_ip) in enumerate(zip(logging_services, hazelcast_nodes)):
-            process = start_service(f"Logging Service {idx+1}", "logging_service", log_ip, hazel_ip)
+            process = start_service(f"Logging Service {idx+1}", "logging_service", log_ip, hazel_ip, consul_service_ip, consul_service_port)
             if process:
                 processes.append(process)
 
         facade_service_ip = config["facade-service"].get("ips")
         if messages_service_ip:
-            process = start_service("Facade Service", "facade_service", facade_service_ip, config_service_ip)
+            process = start_service("Facade Service", "facade_service", facade_service_ip, config_service_ip, consul_service_ip, consul_service_port)
             if process:
                 processes.append(process)
 
