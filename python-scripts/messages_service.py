@@ -10,13 +10,24 @@ import sys
 import time
 import consul
 import uuid
+import json
 import os
 
 app = FastAPI()
 
-def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
-    consul_client = consul.Consul(host=consul_ip, port=consul_port)
 
+def get_value(key, default=None, deserialize_json=False, cast_type=None):
+    _, data = consul_client.kv.get(key)
+    if not data or "Value" not in data:
+        return default
+    value = data["Value"]
+    if deserialize_json:
+        value = json.loads(value)
+    if cast_type:
+        value = cast_type(value)
+    return value
+
+def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
     consul_client.agent.service.register(
     name=service_name,
     service_id=service_id,
@@ -42,15 +53,23 @@ def get_service_ips(service_name):
 def consume_messages():
     global messages
 
+    topic_name = get_value("topic_name").decode("utf-8")
+    kafka_group_id = get_value("group_id").decode("utf-8")
+    kafka_urls = get_value("kafka_urls", deserialize_json=True)
+    auto_offset_reset_value = get_value("auto_offset_reset").decode("utf-8")
+    enable_auto_commit_value = get_value("enable_auto_commit", deserialize_json=True)
+    api_version = tuple(get_value("api_version", deserialize_json=True))
+    request_timeout_ms = get_value("request_timeout_ms", cast_type=int)
+
     try:
         consumer = KafkaConsumer(
-            TOPIC_NAME,
-            bootstrap_servers=kafka_url,
-            auto_offset_reset="latest",
-            enable_auto_commit=True,
-            group_id=KAFKA_GROUP_ID,
-            api_version=(2, 0, 2),
-            request_timeout_ms=15000
+            topic_name,
+            bootstrap_servers=kafka_urls,
+            auto_offset_reset=auto_offset_reset_value,
+            enable_auto_commit=enable_auto_commit_value,
+            group_id=kafka_group_id,
+            api_version=api_version,
+            request_timeout_ms=request_timeout_ms
         )
         write_log("Kafka Consumer Connected", host_port)
     except Exception as e:
@@ -96,8 +115,6 @@ def get_data():
 
 if __name__ == "__main__":
     POLL_INTERVAL = 3
-    TOPIC_NAME = "messages"
-    KAFKA_GROUP_ID = "messages_group"
     CONSUMER_POLL_TIME_OUT_MS = 1000
 
     messages = []
@@ -122,10 +139,13 @@ if __name__ == "__main__":
 
         consul_ip = sys.argv[4].strip()
         consul_port = int(sys.argv[5])
+
+        consul_client = consul.Consul(host=consul_ip, port=consul_port)
+
         write_log(f"List Args: {sys.argv}", host_port)
 
     except Exception as e:
         write_log(f"Exception {e}", host_port)
 
-    write_log(f"Starting up server: {host_url.hostname}:{host_port}", host_port)
+    write_log(f"Starting up server: {host_ip}:{host_port}", host_port)
     uvicorn.run(app, host=host_ip, port=host_port)
