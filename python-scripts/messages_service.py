@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from util_functions import write_log
 import uvicorn
+from fastapi.responses import JSONResponse
 import sys
 from urllib.parse import urlparse
 import requests
@@ -13,12 +14,8 @@ import os
 
 app = FastAPI()
 
-def register_service(service_ip, service_port, consul_ip, consul_port):
-    service_name = os.path.basename(sys.argv[0])
-
+def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
     consul_client = consul.Consul(host=consul_ip, port=consul_port)
-
-    service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
 
     consul_client.agent.service.register(
     name=service_name,
@@ -72,10 +69,27 @@ def consume_messages():
 
 @app.on_event("startup")
 def start_consumer():
-    # register_service(host_ip, host_port, consul_ip, consul_port)
+    try:
+        register_service(service_name, service_id, host_ip, host_port, consul_ip, consul_port)
+    except Exception as e:
+        write_log(f"Kafka Consumer Failed: {e}", host_port)
+        return
+
 
     thread = threading.Thread(target=consume_messages, daemon=True)
     thread.start()
+
+
+
+# Handle the startup event
+@app.on_event("shutdown")
+async def event_shutdown():
+    consul_client = consul.Consul(host=consul_ip, port=consul_port)
+    consul_client.agent.service.deregister(service_id)
+
+@app.get('/health')
+def health_check():
+    return JSONResponse(content={"status": "healthy"}, status_code=200)
 
 @app.get("/")
 def get_data():
@@ -95,25 +109,29 @@ if __name__ == "__main__":
     host_port = 1111
 
     try:
-        host_url = urlparse(sys.argv[1].strip())
-        write_log(f"List: {str(sys.argv)}", host_port)
+        service_name = os.path.basename(sys.argv[0])
+        service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
 
+        host_url = urlparse(sys.argv[1].strip())
         config_server_url = sys.argv[2].strip()
         messages_service_idx = int(sys.argv[3])
 
         kafka_services = get_service_ips("kafka-services")
+        write_log(f"List: {kafka_services}", host_port)
 
         kafka_url = kafka_services[messages_service_idx]
 
         host_port = host_url.port
         host_ip = host_url.hostname
 
-
         consul_ip = sys.argv[4].strip()
         consul_port = int(sys.argv[5])
+        write_log(f"List: {sys.argv}", host_port)
 
     except Exception as e:
         write_log(f"Exception {e}", host_port)
     
+
+
     write_log(f"Starting up server: {host_url.hostname}:{host_port}", host_port)
     uvicorn.run(app, host=host_ip, port=host_port)
