@@ -54,15 +54,6 @@ async def event_shutdown():
     consul_client.agent.service.deregister(service_id)
 
 
-def get_service_ips(service_name):
-    try:
-        response = requests.get(f"{config_server_url}/services/{service_name}")
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error retrieving {service_name} IPs: {e}")
-        return []
-
 def send_message_to_queue(message):
     write_log(f"Writing message {message} to the queue", host_port)
     

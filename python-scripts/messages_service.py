@@ -40,16 +40,6 @@ def register_service(service_name, service_id, service_ip, service_port, consul_
         deregister="10m")
     )
 
-def get_service_ips(service_name):
-    try:
-        response = requests.get(f"{config_server_url}/services/{service_name}")
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error retrieving {service_name} IPs: {e}")
-        return []
-
-
 def consume_messages():
     global messages
 
