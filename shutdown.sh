@@ -15,3 +15,5 @@ fi
 
 
 docker network rm hazelcast-network
+
+kill $(lsof -ti :5001,5002,5003,5004,5005,5006,5007,5008)
