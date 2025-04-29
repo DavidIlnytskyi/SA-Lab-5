@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 from kafka import KafkaConsumer
 from fastapi import FastAPI
 import threading
-import requests
 import uvicorn
 import sys
 import time
@@ -27,17 +26,17 @@ def get_value(key, default=None, deserialize_json=False, cast_type=None):
         value = cast_type(value)
     return value
 
-def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
+def register_service(service_name, service_id, service_ip, service_port):
     consul_client.agent.service.register(
-    name=service_name,
-    service_id=service_id,
-    address=service_ip,
-    port=service_port,
-    check=consul.Check.http(
-        url=f"http://{service_ip}:{consul_ip}/health",
-        interval="10s",
-        timeout="1s",
-        deregister="10m")
+        name=service_name,
+        service_id=service_id,
+        address=service_ip,
+        port=service_port,
+        check=consul.Check.http(
+            url=f"http://{service_ip}:{service_port}/health",
+            interval="10s",
+            timeout="1s",
+            deregister="10m")
     )
 
 def consume_messages():
@@ -78,7 +77,7 @@ def consume_messages():
 @app.on_event("startup")
 def start_consumer():
     try:
-        register_service(service_name, service_id, host_ip, host_port, consul_ip, consul_port)
+        register_service(service_name, service_id, host_ip, host_port)
     except Exception as e:
         write_log(f"Kafka Consumer Failed: {e}", host_port)
         return

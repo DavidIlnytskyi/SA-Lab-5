@@ -1,3 +1,4 @@
+from fastapi.responses import JSONResponse
 from util_functions import write_log
 from urllib.parse import urlparse
 from kafka import KafkaProducer
@@ -28,23 +29,23 @@ def get_service_ips_consul(service_name: str):
 
     return result_ips
 
-def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
+def register_service(service_name, service_id, service_ip, service_port):
     consul_client.agent.service.register(
-    name=service_name,
-    service_id=service_id,
-    address=service_ip,
-    port=service_port,
-    check=consul.Check.http(
-        url=f"http://{service_ip}:{consul_ip}/health",
-        interval="10s",
-        timeout="1s",
-        deregister="10m")
+        name=service_name,
+        service_id=service_id,
+        address=service_ip,
+        port=service_port,
+        check=consul.Check.http(
+            url=f"http://{service_ip}:{service_port}/health",
+            interval="10s",
+            timeout="1s",
+            deregister="10m")
     )
 
 @app.on_event("startup")
 def start_consumer():
     try:
-        register_service(service_name, service_id, host_ip, host_port, consul_ip, consul_port)
+        register_service(service_name, service_id, host_ip, host_port)
     except Exception as e:
         write_log(f"Kafka Consumer Failed: {e}", host_port)
         return
@@ -52,7 +53,6 @@ def start_consumer():
 @app.on_event("shutdown")
 async def event_shutdown():
     consul_client.agent.service.deregister(service_id)
-
 
 def send_message_to_queue(message):
     write_log(f"Writing message {message} to the queue", host_port)
@@ -64,15 +64,17 @@ def send_message_to_queue(message):
 @app.post("/")
 def add_data(message: dict):
     write_log("POST request", host_port)
+
     uuid_val = uuid.uuid4()
     message_value = message.get("msg", "")
     data = {"uuid": str(uuid_val), "msg": message_value}
-    
     shuffled_urls = logging_urls[:]
+
     shuffle(shuffled_urls)
-    
+
     for logging_service_url in shuffled_urls:
         try:
+            logging_service_url = "http://" + logging_service_url
             response = requests.post(logging_service_url, json=data, timeout=3)
             if response.status_code == 200:
                 write_log(f"Sending message {message_value} to the logging service", host_port)
@@ -83,6 +85,10 @@ def add_data(message: dict):
     send_message_to_queue(message_value)
     
     return {"msg": "success"}
+
+@app.get('/health')
+def health_check():
+    return JSONResponse(content={"status": "healthy"}, status_code=200)
 
 @app.get("/")
 def get_data():
@@ -120,8 +126,7 @@ def get_data():
 
     GET_request_response = {
         "logging_service_response": logging_service_messages,
-        "messages_service_response": messages_service_messages
-    }
+        "messages_service_response": messages_service_messages}
 
     write_log(f"GET request response: {GET_request_response}", host_port)
 
@@ -129,10 +134,6 @@ def get_data():
 
 if __name__ == "__main__":
     TOPIC_NAME = "messages"
-
-    messages_urls = []
-    logging_urls = []
-    kafka_urls = []
 
     host_url = urlparse(sys.argv[1])
     config_server_url = sys.argv[2]
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     service_name = os.path.basename(sys.argv[0])
     service_id = f"{service_name}-{str(uuid.uuid4())[:4]}"
 
-    time.sleep(15)
+    time.sleep(10)
 
     messages_urls = get_service_ips_consul("messages-service")
     logging_urls = get_service_ips_consul("logging-service")

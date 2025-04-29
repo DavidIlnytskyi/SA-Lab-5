@@ -1,6 +1,7 @@
 from util_functions import write_log
 from urllib.parse import urlparse
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from domain import *
 import consul
 import hazelcast
@@ -13,18 +14,23 @@ import os
 
 app = FastAPI()
 
-def register_service(service_name, service_id, service_ip, service_port, consul_ip, consul_port):
+def register_service(service_name, service_id, service_ip, service_port):
     consul_client.agent.service.register(
         name=service_name,
         service_id=service_id,
         address=service_ip,
         port=service_port,
         check=consul.Check.http(
-            url=f"http://{service_ip}:{consul_ip}/health",
+            url=f"http://{service_ip}:{service_port}/health",
             interval="10s",
             timeout="1s",
             deregister="10m")
     )
+
+@app.get('/health')
+def health_check():
+    return JSONResponse(content={"status": "healthy"}, status_code=200)
+
 
 @app.post("/")
 def add_data(data: DataModel):
@@ -55,10 +61,10 @@ def startup_event():
         write_log(f"Kafka Consumer Failed: {e}", host_port)
 
     try:
-        register_service(service_name, service_id, host_ip, host_port, consul_ip, consul_port)
+        register_service(service_name, service_id, host_ip, host_port)
+        write_log(f"Logging service registered successfully", host_port)
     except Exception as e:
         write_log(f"Kafka Consumer Failed: {e}", host_port)
-    return
 
 @app.on_event("shutdown")
 async def event_shutdown():

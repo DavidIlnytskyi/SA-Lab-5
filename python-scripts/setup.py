@@ -57,8 +57,10 @@ if __name__ == "__main__":
         consul_client = consul.Consul(host="127.0.0.1", port=8500)
 
         hazelcast_nodes_json = json.dumps(hazelcast_nodes)
+        logging_services_json = json.dumps(logging_services)
 
         consul_client.kv.put("hazelcast_urls", hazelcast_nodes_json)
+        consul_client.kv.put("logging_service", logging_services_json)
         consul_client.kv.put("topic_name", TOPIC_NAME)
         consul_client.kv.put("group_id", KAFKA_GROUP_ID)
         consul_client.kv.put("kafka_urls", json.dumps(kafka_service_ip))
