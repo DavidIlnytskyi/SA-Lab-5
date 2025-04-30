@@ -1,0 +1,7 @@
+16:01:43: List Kafka: ['127.0.0.1:9092', '127.0.0.1:9093', '127.0.0.1:9094']
+16:01:43: List Args: ['./python-scripts/messages_service.py', 'http://127.0.0.1:5008', 'http://127.0.0.1:5005', '2', '127.0.0.1', '8500']
+16:01:43: Starting up server: 127.0.0.1:5008
+16:01:43: Kafka Consumer Connected
+16:02:07: New message received: I am message 1
+16:02:07: New message received: I am message 4
+16:02:07: New message received: I am message 6

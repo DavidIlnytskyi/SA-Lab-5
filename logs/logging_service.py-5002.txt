@@ -1,0 +1,13 @@
+16:01:43: Starting up server 127.0.0.1:5002
+16:01:43: Connecting to Hazelcase client
+16:01:43: Connected to Hazelcase client
+16:01:43: Logging service registered successfully
+16:02:04: Post request
+16:02:04: Added key: bfb0789e-0364-4f2a-9b83-93ff24bb3803 with value: I am message 1 by logging service: ParseResult(scheme='http', netloc='127.0.0.1:5002', path='', params='', query='', fragment='')
+16:02:05: Post request
+16:02:05: Added key: 65a12e07-4ded-4ef0-a9c5-90b6201be0b3 with value: I am message 4 by logging service: ParseResult(scheme='http', netloc='127.0.0.1:5002', path='', params='', query='', fragment='')
+16:02:05: Post request
+16:02:05: Added key: 4435b437-164f-44af-ab0b-2a7e4a598197 with value: I am message 6 by logging service: ParseResult(scheme='http', netloc='127.0.0.1:5002', path='', params='', query='', fragment='')
+16:02:05: Post request
+16:02:05: Added key: cf2a9ca0-0ec2-4c9a-a76a-6606e550541c with value: I am message 7 by logging service: ParseResult(scheme='http', netloc='127.0.0.1:5002', path='', params='', query='', fragment='')
+16:02:12: Get request

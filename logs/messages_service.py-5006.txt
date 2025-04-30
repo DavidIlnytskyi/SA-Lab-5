@@ -1,0 +1,10 @@
+16:01:42: List Kafka: ['127.0.0.1:9092', '127.0.0.1:9093', '127.0.0.1:9094']
+16:01:42: List Args: ['./python-scripts/messages_service.py', 'http://127.0.0.1:5006', 'http://127.0.0.1:5005', '0', '127.0.0.1', '8500']
+16:01:42: Starting up server: 127.0.0.1:5006
+16:01:42: Kafka Consumer Connected
+16:02:07: New message received: I am message 3
+16:02:07: New message received: I am message 5
+16:02:07: New message received: I am message 7
+16:02:07: New message received: I am message 9
+16:02:12: GET request
+16:02:12: GET request response: ['I am message 3', 'I am message 5', 'I am message 7', 'I am message 9']

@@ -1,0 +1,6 @@
+16:01:43: Starting up server 127.0.0.1:5003
+16:01:43: Connecting to Hazelcase client
+16:01:43: Connected to Hazelcase client
+16:01:43: Logging service registered successfully
+16:02:05: Post request
+16:02:05: Added key: 1c19bae2-1049-430a-ac1f-fe7484b6485e with value: I am message 3 by logging service: ParseResult(scheme='http', netloc='127.0.0.1:5003', path='', params='', query='', fragment='')

@@ -1,0 +1,39 @@
+16:01:53: Messages urls from consul: ['127.0.0.1:5007', '127.0.0.1:5006', '127.0.0.1:5008']
+16:01:53: Logging urls from consul: ['127.0.0.1:5002', '127.0.0.1:5003', '127.0.0.1:5001']
+16:01:53: Starting up server 127.0.0.1:5004
+16:02:04: POST request
+16:02:04: Sending message I am message 0 to the logging service
+16:02:04: Writing message I am message 0 to the queue
+16:02:04: POST request
+16:02:04: Sending message I am message 1 to the logging service
+16:02:04: Writing message I am message 1 to the queue
+16:02:04: POST request
+16:02:04: Sending message I am message 2 to the logging service
+16:02:04: Writing message I am message 2 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 3 to the logging service
+16:02:05: Writing message I am message 3 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 4 to the logging service
+16:02:05: Writing message I am message 4 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 5 to the logging service
+16:02:05: Writing message I am message 5 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 6 to the logging service
+16:02:05: Writing message I am message 6 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 7 to the logging service
+16:02:05: Writing message I am message 7 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 8 to the logging service
+16:02:05: Writing message I am message 8 to the queue
+16:02:05: POST request
+16:02:05: Sending message I am message 9 to the logging service
+16:02:05: Writing message I am message 9 to the queue
+16:02:12: GET request
+16:02:12: Trying to connect to logging service: http://127.0.0.1:5002
+16:02:12: Connected successfully
+16:02:12: Trying to connect to messages service: http://127.0.0.1:5006
+16:02:12: Connected successfully
+16:02:12: GET request response: {'logging_service_response': {'messages': [['cf2a9ca0-0ec2-4c9a-a76a-6606e550541c', 'I am message 7'], ['42ce8459-1a5f-4cfb-871c-46e2943cf63e', 'I am message 6'], ['22eb026b-b389-4871-89e1-71be07d97e21', 'I am message 9'], ['65a12e07-4ded-4ef0-a9c5-90b6201be0b3', 'I am message 4'], ['45b07aee-b050-4cbb-b554-1f74bb4a4384', 'I am message 8'], ['bfb0789e-0364-4f2a-9b83-93ff24bb3803', 'I am message 1'], ['4435b437-164f-44af-ab0b-2a7e4a598197', 'I am message 6']]}, 'messages_service_response': ['I am message 3', 'I am message 5', 'I am message 7', 'I am message 9']}

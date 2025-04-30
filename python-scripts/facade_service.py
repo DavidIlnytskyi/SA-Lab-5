@@ -101,8 +101,6 @@ def get_data():
     
     logging_service_messages = {"error": "No logging service available"}
     messages_service_messages = {"error": "Messages service unavailable"}
-    write_log(f"Shuffled logging service: {shuffled_logging_urls}", host_port)
-    write_log(f"Shuffled logging service: {shuffled_messages_urls}", host_port)
 
     for logging_url in shuffled_logging_urls:
         try:
@@ -118,6 +116,7 @@ def get_data():
 
     for messages_url in shuffled_messages_urls:
         try:
+            messages_url = "http://" + messages_url
             write_log(f"Trying to connect to messages service: {messages_url}", host_port)
             messages_service_response = requests.get(messages_url, timeout=10)
             if messages_service_response.status_code == 200:
